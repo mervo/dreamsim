@@ -10,7 +10,7 @@ import numpy as np
 INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 # A higher score means more different, lower means more similar.
 # Tune over some window in the future
-DISTANCE_THRESHOLD = 0.14
+DISTANCE_THRESHOLD = 0
 BINARY_THRESHOLD = 70
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
 os.makedirs(os.path.dirname(OUTPUT_DIR), exist_ok=True)
@@ -47,9 +47,9 @@ t = transforms.Compose([
     transforms.Resize((img_size, img_size),
                       interpolation=transforms.InterpolationMode.BICUBIC),
     # helped improve separation from 0.1 to 0.13, reducing false negatives
-    transforms.Lambda(lambda img: Image.fromarray(bilateral_filter(img))),
-    transforms.Lambda(lambda img: Image.fromarray(
-        binary_threshold(img, BINARY_THRESHOLD))),
+    # transforms.Lambda(lambda img: Image.fromarray(bilateral_filter(img))),
+    # transforms.Lambda(lambda img: Image.fromarray(
+    #     binary_threshold(img, BINARY_THRESHOLD))),
     transforms.ToTensor()
 ])
 
@@ -81,8 +81,10 @@ for filename in sorted(os.listdir(INPUT_DIR)):
         img = preprocess(Image.open(file_path)).to(device)
         distance = model(cur_img_ref, img)
         if distance > DISTANCE_THRESHOLD:
-            print(
-                f'Anomaly detected, updating new reference image: {filename} vs ref image {cur_img_ref_filename}, distance = {distance}')
+            anomaly_log = f'Anomaly detected, updating new reference image: {filename} vs ref image {cur_img_ref_filename}, distance = {distance}'
+            print(anomaly_log)
+            with open(os.path.join(OUTPUT_DIR, 'anomaly_distance.log'), 'a') as f:
+                f.write(anomaly_log + '\n')
             cur_img_ref = img
             cur_img_ref_filename = filename
             list_of_anomalies.append(filename)

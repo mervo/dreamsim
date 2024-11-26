@@ -11,6 +11,8 @@ import numpy as np
 DISTANCE_THRESHOLD = .13
 BINARY_THRESHOLD = 40
 FRAMES_SINCE_ANOMALY_TO_REFRESH = 30
+PROPORTION_OF_IMAGE_TO_KEEP_FROM_CENTER = 1/2
+VISUALIZE_TRANSFORMATIONS = True
 
 INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
@@ -55,8 +57,18 @@ def pad_to_square(image, padding_value=0):
     return transforms.functional.pad(image, padding, fill=padding_value)
 
 
+def crop_center_of_image(image, proportion_of_image):
+    width, height = image.size
+    crop_width = width * proportion_of_image
+    left = (width - crop_width) // 2
+    right = left + crop_width
+    return image.crop((left, 0, right, height))
+
+
 t = transforms.Compose([
-    transforms.Lambda(pad_to_square),
+    transforms.Lambda(lambda img: crop_center_of_image(img,
+                                                       PROPORTION_OF_IMAGE_TO_KEEP_FROM_CENTER)),
+    transforms.Lambda(lambda img: pad_to_square(img)),
     transforms.Resize((img_size, img_size),
                       interpolation=transforms.InterpolationMode.BICUBIC),
     # helped improve separation from 0.11 to 0.23 for change in sensor settings, reducing false negatives
@@ -69,7 +81,23 @@ t = transforms.Compose([
 
 def preprocess(img):
     img = img.convert('RGB')
-    return t(img).unsqueeze(0)
+    img = t(img)
+
+    if VISUALIZE_TRANSFORMATIONS:
+        # Convert PyTorch tensor back to NumPy array
+        # Permute C x H x W to H x W x C
+        numpy_img = img.permute(1, 2, 0).numpy()
+        # Scale values from [0, 1] (default in ToTensor) to [0, 255] for OpenCV
+        numpy_img = (numpy_img * 255).astype(np.uint8)
+        # Convert RGB (Pillow/torch) to BGR (OpenCV) for display
+        numpy_img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
+
+        # Display the image
+        cv2.imshow("Transformed Image", numpy_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return img.unsqueeze(0)
 
 
 # Load model

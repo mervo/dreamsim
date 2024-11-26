@@ -9,9 +9,8 @@ import numpy as np
 
 INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 # A higher score means more different, lower means more similar.
-# Tune over some window in the future
-DISTANCE_THRESHOLD = 0
-BINARY_THRESHOLD = 70
+DISTANCE_THRESHOLD = .135
+BINARY_THRESHOLD = 40
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
 os.makedirs(os.path.dirname(OUTPUT_DIR), exist_ok=True)
 
@@ -34,7 +33,7 @@ def bilateral_filter(image):
         np.ndarray: The filtered image.
     """
     image = np.array(image)
-    return cv2.bilateralFilter(image, 9, 75, 75)
+    return cv2.bilateralFilter(cv2.bilateralFilter(image, 21, 75, 75), 5, 150, 75)
 
 
 def binary_threshold(image, min_threshold):
@@ -46,10 +45,10 @@ def binary_threshold(image, min_threshold):
 t = transforms.Compose([
     transforms.Resize((img_size, img_size),
                       interpolation=transforms.InterpolationMode.BICUBIC),
-    # helped improve separation from 0.1 to 0.13, reducing false negatives
-    # transforms.Lambda(lambda img: Image.fromarray(bilateral_filter(img))),
-    # transforms.Lambda(lambda img: Image.fromarray(
-    #     binary_threshold(img, BINARY_THRESHOLD))),
+    # helped improve separation from 0.11 to 0.23 for change in sensor settings, reducing false negatives
+    transforms.Lambda(lambda img: Image.fromarray(bilateral_filter(img))),
+    transforms.Lambda(lambda img: Image.fromarray(
+        binary_threshold(img, BINARY_THRESHOLD))),
     transforms.ToTensor()
 ])
 

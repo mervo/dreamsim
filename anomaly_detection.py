@@ -7,12 +7,14 @@ import os
 import cv2
 import numpy as np
 
-INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 # A higher score means more different, lower means more similar.
-DISTANCE_THRESHOLD = .135
+DISTANCE_THRESHOLD = .16
 BINARY_THRESHOLD = 40
+
+INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
 os.makedirs(os.path.dirname(OUTPUT_DIR), exist_ok=True)
+
 
 img_size = 224
 
@@ -42,7 +44,18 @@ def binary_threshold(image, min_threshold):
     return thresh
 
 
+def pad_to_square(image, padding_value=0):
+    width, height = image.size
+    max_dim = max(width, height)
+    pad_width = (max_dim - width) // 2
+    pad_height = (max_dim - height) // 2
+    padding = (pad_width, pad_height, max_dim - width -
+               pad_width, max_dim - height - pad_height)
+    return transforms.functional.pad(image, padding, fill=padding_value)
+
+
 t = transforms.Compose([
+    transforms.Lambda(pad_to_square),
     transforms.Resize((img_size, img_size),
                       interpolation=transforms.InterpolationMode.BICUBIC),
     # helped improve separation from 0.11 to 0.23 for change in sensor settings, reducing false negatives

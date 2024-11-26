@@ -8,8 +8,9 @@ import cv2
 import numpy as np
 
 # A higher score means more different, lower means more similar.
-DISTANCE_THRESHOLD = .16
+DISTANCE_THRESHOLD = .13
 BINARY_THRESHOLD = 40
+FRAMES_SINCE_ANOMALY_TO_REFRESH = 30
 
 INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
@@ -78,19 +79,29 @@ model, _ = dreamsim(pretrained=True, device=device)
 # Load images
 cur_img_ref = ''
 cur_img_ref_filename = ''
+frames_since_anomaly = 0
 list_of_anomalies = []
 for filename in sorted(os.listdir(INPUT_DIR)):
+    frames_since_anomaly += 1
     file_path = os.path.join(INPUT_DIR, filename)
     if os.path.isfile(file_path):
         if len(cur_img_ref) == 0:  # First image
             cur_img_ref = preprocess(Image.open(file_path)).to(device)
             cur_img_ref_filename = filename
+            frames_since_anomaly = 0  # reset counter
             list_of_anomalies.append(filename)
             print(f'cur_img_ref: {cur_img_ref_filename}')
             shutil.copyfile(file_path, os.path.join(OUTPUT_DIR, filename))
             continue  # no need to compare to itself
 
         img = preprocess(Image.open(file_path)).to(device)
+
+        if frames_since_anomaly >= FRAMES_SINCE_ANOMALY_TO_REFRESH:
+            frames_since_anomaly = 0
+            cur_img_ref = img
+            cur_img_ref_filename = filename
+            print(f'Updating cur_img_ref to: {filename}')
+
         distance = model(cur_img_ref, img)
         if distance > DISTANCE_THRESHOLD:
             anomaly_log = f'Anomaly detected, updating new reference image: {filename} vs ref image {cur_img_ref_filename}, distance = {distance}'
@@ -98,6 +109,7 @@ for filename in sorted(os.listdir(INPUT_DIR)):
             with open(os.path.join(OUTPUT_DIR, 'anomaly_distance.log'), 'a') as f:
                 f.write(anomaly_log + '\n')
             cur_img_ref = img
+            frames_since_anomaly = 0  # reset counter
             cur_img_ref_filename = filename
             list_of_anomalies.append(filename)
             shutil.copyfile(file_path, os.path.join(OUTPUT_DIR, filename))

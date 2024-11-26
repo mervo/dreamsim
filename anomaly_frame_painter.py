@@ -9,7 +9,7 @@ import shutil
 
 from PIL import Image, ImageDraw
 
-ROOT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_0.137/'
+ROOT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_0.12/'
 BACKUP_DIR = os.path.join(ROOT_DIR, 'backup')
 os.makedirs(BACKUP_DIR, exist_ok=True)
 for filename in os.listdir(ROOT_DIR):

@@ -8,11 +8,11 @@ import cv2
 import numpy as np
 
 # A higher score means more different, lower means more similar.
-DISTANCE_THRESHOLD = .13
-BINARY_THRESHOLD = 40
+DISTANCE_THRESHOLD = .12
+BINARY_THRESHOLD = 50
 FRAMES_SINCE_ANOMALY_TO_REFRESH = 30
 PROPORTION_OF_IMAGE_TO_KEEP_FROM_CENTER = 1/2
-VISUALIZE_TRANSFORMATIONS = True
+VISUALIZE_TRANSFORMATIONS = False
 
 INPUT_DIR = '/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/scanning_profile'
 OUTPUT_DIR = f'/data/datasets/beex/2024-02-29--10-25-39_SiteA_revisit_with_rtk_0_fls/anomaly_output_{DISTANCE_THRESHOLD}/'
